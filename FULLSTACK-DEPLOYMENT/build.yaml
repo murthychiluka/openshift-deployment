@@ -1,0 +1,37 @@
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: nodejs-build
+  namespace: cloud53375-dev
+  labels:
+    app: nodejs-app
+spec:
+  runPolicy: Serial
+  source:
+    type: Git
+    git:
+      uri: "https://github.com/CloudTechDevOps/Hotstar-DevOps-Project-NodeJS.git"
+      ref: main     # change if your default branch is not 'main'
+    contextDir: "." # if Dockerfile is at repo root
+  strategy:
+    type: Docker
+    dockerStrategy: {}
+  output:
+    to:
+      kind: ImageStreamTag
+      name: nodejs-image:latest
+  triggers:
+    - type: GitHub
+      github:
+        secret: mySuperSecretKey123   # 🔑 choose your own secret string
+    - type: ConfigChange
+    - type: ImageChange
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: nodejs-image
+  namespace: cloud53375-dev
+  labels:
+    app: nodejs-app

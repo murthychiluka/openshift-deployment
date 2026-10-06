@@ -1,0 +1,78 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: deploy-sample-pipeline
+  namespace: cloud5335-dev
+spec:
+  params:
+    - default: 'veeranarni/hotstar:latest'        #### cahnge here your actual image
+      description: Docker Hub image to deploy
+      name: image
+      type: string
+  workspaces: []
+  tasks:
+    - name: deploy-to-openshift
+      params:
+        - name: image
+          value: $(params.image)
+      taskSpec:
+        params:
+          - name: image
+            type: string
+        steps:
+          - name: deploy
+            image: 'quay.io/openshift/origin-cli:4.14'
+            script: |
+              #!/usr/bin/env sh
+              echo "🚀 Deploying $(params.image) to OpenShift..."
+
+              oc apply -f - <<EOF
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: sample-app
+                namespace: cloud5335-dev
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: sample-app
+                template:
+                  metadata:
+                    labels:
+                      app: sample-app
+                  spec:
+                    containers:
+                      - name: web
+                        image: $(params.image)
+                        ports:
+                          - containerPort: 3000
+              ---
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: sample-service
+                namespace: cloud5335-dev
+              spec:
+                selector:
+                  app: sample-app
+                ports:
+                  - protocol: TCP
+                    port: 80
+                    targetPort: 3000
+              ---
+              apiVersion: route.openshift.io/v1
+              kind: Route
+              metadata:
+                name: sample-route
+                namespace: cloud5335-dev
+              spec:
+                to:
+                  kind: Service
+                  name: sample-service
+                port:
+                  targetPort: 3000
+                tls:
+                  termination: edge
+              EOF
+

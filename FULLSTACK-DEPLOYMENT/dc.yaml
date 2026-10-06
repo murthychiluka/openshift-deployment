@@ -1,0 +1,64 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: nodejs-app
+  namespace: cloud53375-dev
+  labels:
+    app: nodejs-app
+spec:
+  replicas: 1
+  selector:
+    app: nodejs-app
+  template:
+    metadata:
+      labels:
+        app: nodejs-app
+    spec:
+      containers:
+        - name: nodejs-app
+          image: image-registry.openshift-image-registry.svc:5000/cloud53375-dev/nodejs-image:latest
+          ports:
+            - containerPort: 3000
+  strategy:
+    type: Rolling
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+          - nodejs-app
+        from:
+          kind: ImageStreamTag
+          name: nodejs-image:latest
+          namespace: cloud53375-dev
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodejs-app
+  namespace: cloud53375-dev
+  labels:
+    app: nodejs-app
+spec:
+  selector:
+    app: nodejs-app
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: nodejs-app
+  namespace: cloud53375-dev
+spec:
+  to:
+    kind: Service
+    name: nodejs-app
+  port:
+    targetPort: 3000
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
